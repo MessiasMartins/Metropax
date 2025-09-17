@@ -28,6 +28,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -408,11 +409,17 @@ public class AgendadaCriaObjetosWLSKW implements ScheduledAction {
     private Map<String, Object> prepareContractData(List<Map<String, Object>> contractInfo) throws Exception {
         Map<String, Object> contractData = new HashMap();
         BigDecimal idPlanoWebLuto = new BigDecimal(((Map)contractInfo.get(0)).get("plan_id").toString());
-        String tipoPaymentWebLuto = ((Map)contractInfo.get(0)).get("payment").toString();
+        Object paymentValue = ((Map)contractInfo.get(0)).get("payment");
+        String tipoPaymentWebLuto = paymentValue != null ? paymentValue.toString() : null;
+        String normalizedTipoPayment = tipoPaymentWebLuto != null ? tipoPaymentWebLuto.trim().toLowerCase(Locale.ROOT) : null;
         Map<Integer, Integer> planoDePara = getPlanoDePara();
         Map<String, Integer> tipoVendaDePara = getTipoVendaDePara();
         Integer codPlanSankhya = (Integer)planoDePara.get(idPlanoWebLuto != null ? idPlanoWebLuto.intValue() : null);
-        Integer codTipoVenda = (Integer)tipoVendaDePara.get(tipoPaymentWebLuto);
+        Integer codTipoVenda = normalizedTipoPayment != null ? (Integer)tipoVendaDePara.get(normalizedTipoPayment) : null;
+        if (codTipoVenda == null) {
+            this.utilitariosDOit.escreveLog("Tipo de pagamento recebido sem correspondência: " + tipoPaymentWebLuto);
+            throw new RuntimeException("Tipo de pagamento WebLuto [" + tipoPaymentWebLuto + "] sem correspondência no mapa de/para.");
+        }
         System.out.println("Cod Tipo venda: " + codTipoVenda);
         if (codPlanSankhya == null) {
             throw new RuntimeException("Plano WebLuto ID [" + idPlanoWebLuto + "] sem correspondência no mapa de/para.");
